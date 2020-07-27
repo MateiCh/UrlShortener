@@ -1,0 +1,74 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home page";
+}
+
+<div>
+    <form method="get" name="shortenlink">
+        @Html.TextBox("originalUrl", "", new { @id = "originalUrl", @class = "form-control form-control-sm" })<br />
+        <input id="submitBtn" type="submit" name="ExecuteCommand" value="Shorten" class="submit btn btn-primary" onclick="event.preventDefault();GetShorterLink();" />
+    </form>
+</div>
+<br />
+<div class="table table-borderless">
+    <table class="table table-borderless table-hover" id="linkTable">
+        @if (Model.TemporaryList != null && Model.TemporaryList.Any())
+        {
+            @foreach (var u in Model.TemporaryList)
+            {
+                <tr>
+                    @{ 
+                        var absoluteUri = string.Concat(
+                        HttpContext.Request.Scheme,
+                        "://",
+                        HttpContext.Request.Host.ToUriComponent(),
+                        HttpContext.Request.PathBase.ToUriComponent(),
+                        HttpContext.Request.Path.ToUriComponent(),
+                        HttpContext.Request.QueryString.ToUriComponent(),
+                        u.ShortUrl
+                        );
+                    }
+                    <td><a href="@u.Url" target="_blank">@u.Url</a></td>
+                    <td class="shortLink"><a href="@absoluteUri" target="_blank">@absoluteUri</a></td>
+                    <td><button class="copyButton btn btn-sm btn-primary">Copy</button></td>
+                </tr>
+            }
+        }
+    </table>
+</div>
+<div class="text-danger" id="errorText">
+</div>
+@section Scripts {
+    <script>
+        function GetShorterLink() {
+            var originalUrl = $("#originalUrl").val();
+            $.ajax({
+                type: "GET",
+                url: "api/ShortenLink",
+                data: {
+                    handler: "ShortenLink",
+                    originalUrl: originalUrl,
+                },
+                success: function (data) {
+                    var shortUrl = $(location).attr('href') + data.shortUrl;
+                    var originalUrl = data.url;
+                    $('#linkTable').append('<tr><td><a href="' + originalUrl + '" target="_blank">' + originalUrl + '</a></td><td class="shortLink"><a href="' + shortUrl + '" target="_blank">' + shortUrl  + '</a></td><td><button class="copyButton btn btn-sm btn-primary">Copy</button></td></tr>');
+                },
+                error: function (data) {
+                    var x = 1;
+                },
+            });
+        }
+        $(document).on("click", ".copyButton", function () {
+            var copyLink = $(this).parent().parent().find(".shortLink").find("a").attr("href");
+            var text = document.createElement('input');
+            text.setAttribute('type', 'text');
+            text.value = copyLink;
+            document.body.appendChild(text);
+            text.select();
+            document.execCommand('copy');
+            document.body.removeChild(text);
+        })
+    </script>
+}
